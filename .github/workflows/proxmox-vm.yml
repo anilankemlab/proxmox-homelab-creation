@@ -97,4 +97,3 @@ jobs:
       - name: Show outputs (create only)
         if: ${{ github.event.inputs.action == 'create' }}
         run: terraform output
-

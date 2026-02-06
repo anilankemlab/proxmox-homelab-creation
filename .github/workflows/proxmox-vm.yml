@@ -40,7 +40,7 @@ on:
 
 jobs:
   proxmox-vm:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     env:
       TF_IN_AUTOMATION: "true"

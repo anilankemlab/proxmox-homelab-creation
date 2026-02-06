@@ -3,7 +3,8 @@ resource "proxmox_vm_qemu" "vm_from_template" {
   target_node = var.node_name
 
   # Clone from an existing template
-  clone = var.template_name
+  clone      = var.template_name
+  full_clone = var.full_clone
 
   memory = var.vm_memory_mb
 

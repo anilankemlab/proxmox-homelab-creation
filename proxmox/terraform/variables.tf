@@ -35,6 +35,12 @@ variable "template_name" {
   type        = string
 }
 
+variable "full_clone" {
+  description = "Whether to perform a full clone instead of a linked clone"
+  type        = bool
+  default     = true
+}
+
 variable "vm_cores" {
   description = "Number of vCPUs for the VM"
   type        = number

@@ -17,7 +17,7 @@ variable "proxmox_token_secret" {
 variable "proxmox_insecure" {
   description = "Whether to skip TLS certificate verification for the Proxmox API"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "node_name" {

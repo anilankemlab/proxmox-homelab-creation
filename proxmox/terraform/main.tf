@@ -5,10 +5,10 @@ resource "proxmox_vm_qemu" "vm_from_template" {
   # Clone from an existing template
   clone = var.template_name
 
-  cores  = var.vm_cores
   memory = var.vm_memory_mb
 
   cpu {
+    cores   = var.vm_cores
     sockets = 1
   }
 
@@ -16,7 +16,7 @@ resource "proxmox_vm_qemu" "vm_from_template" {
 
   disk {
     size    = "${var.disk_size_gb}G"
-    type    = "scsi"
+    type    = "disk"
     slot    = "scsi0"
     storage = var.disk_storage
   }

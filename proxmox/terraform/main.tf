@@ -14,6 +14,7 @@ resource "proxmox_vm_qemu" "vm_from_template" {
   disk {
     size    = "${var.disk_size_gb}G"
     type    = "scsi"
+    slot    = "scsi0"
     storage = var.disk_storage
   }
 

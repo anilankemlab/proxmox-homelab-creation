@@ -5,9 +5,12 @@ resource "proxmox_vm_qemu" "vm_from_template" {
   # Clone from an existing template
   clone = var.template_name
 
-  cores   = var.vm_cores
-  sockets = 1
-  memory  = var.vm_memory_mb
+  cores  = var.vm_cores
+  memory = var.vm_memory_mb
+
+  cpu {
+    sockets = 1
+  }
 
   tags = length(var.vm_tags) > 0 ? join(";", var.vm_tags) : null
 
@@ -21,12 +24,5 @@ resource "proxmox_vm_qemu" "vm_from_template" {
   # Reasonable defaults
   onboot = true
   scsihw = "virtio-scsi-pci"
-
-  # Prevent accidental re-creation if Proxmox changes certain attributes
-  lifecycle {
-    ignore_changes = [
-      network_interface,
-    ]
-  }
 }
 

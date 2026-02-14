@@ -14,11 +14,6 @@ variable "proxmox_token_secret" {
   sensitive   = true
 }
 
-variable "proxmox_insecure" {
-  description = "Whether to skip TLS certificate verification for the Proxmox API"
-  type        = bool
-  default     = true
-}
 
 variable "node_name" {
   description = "Proxmox node where the VM will run"

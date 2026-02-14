@@ -57,7 +57,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Terraform init
-        run: terraform init
+        run: terraform init -input=false
         env:
           TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
           TF_VAR_proxmox_token_id: ${{ secrets.PROXMOX_TOKEN_ID }}

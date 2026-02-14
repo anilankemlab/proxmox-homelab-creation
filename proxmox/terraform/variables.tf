@@ -18,6 +18,7 @@ variable "proxmox_token_secret" {
 variable "node_name" {
   description = "Proxmox node where the VM will run"
   type        = string
+  default = "proxmox"
 }
 
 variable "vm_name" {
@@ -28,6 +29,7 @@ variable "vm_name" {
 variable "template_name" {
   description = "Name of the Proxmox VM template to clone from"
   type        = string
+  default     = "ubuntu24-golden"
 }
 
 variable "full_clone" {
@@ -45,11 +47,13 @@ variable "vm_cores" {
 variable "vm_memory_mb" {
   description = "Amount of RAM for the VM in megabytes"
   type        = number
+  default     = 2048
 }
 
 variable "disk_size_gb" {
   description = "Disk size for the VM in gigabytes"
   type        = number
+  default = 20
 }
 
 variable "disk_storage" {

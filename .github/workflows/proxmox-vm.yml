@@ -70,7 +70,7 @@ jobs:
             # -var="proxmox_api_url=${TF_VAR_proxmox_api_url}" \
             # -var="proxmox_token_id=${TF_VAR_proxmox_token_id}" \
             # -var="proxmox_token_secret=${TF_VAR_proxmox_token_secret}" \
-            -var="node_name=proxmox" \
+            -var="node_name=${{ github.event.inputs.node_name }}" \
             -var="vm_name=${{ github.event.inputs.vm_name }}" \
             -var="template_name=${{ github.event.inputs.template }}" \
             -var="vm_memory_mb=${{ github.event.inputs.ram_mb }}" \
@@ -83,7 +83,7 @@ jobs:
             # -var="proxmox_api_url=${TF_VAR_proxmox_api_url}" \
             # -var="proxmox_token_id=${TF_VAR_proxmox_token_id}" \
             # -var="proxmox_token_secret=${TF_VAR_proxmox_token_secret}" \
-            -var="node_name=proxmox" \
+            -var="node_name=${{ github.event.inputs.node_name }}" \
             -var="vm_name=${{ github.event.inputs.vm_name }}" \
             -var="template_name=${{ github.event.inputs.template }}" \
             -var="vm_memory_mb=${{ github.event.inputs.ram_mb }}" \

@@ -37,9 +37,9 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
     model  = "virtio"
   }
 
-  operating_system {
-    type = "l26"
-  }
+  # operating_system {
+  #   type = "l26"
+  # }
 
   on_boot = true
 }

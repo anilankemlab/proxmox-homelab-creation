@@ -1,0 +1,133 @@
+name: Proxmox Cluster create/destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      action:
+        description: "Action"
+        required: true
+        type: choice
+        options:
+          - create
+          - destroy
+
+      node_name:
+        description: "Proxmox node"
+        required: true
+        default: proxmox
+
+jobs:
+
+  cluster:
+
+    runs-on: self-hosted
+
+    defaults:
+      run:
+        working-directory: proxmox/terraform
+
+    env:
+      TF_IN_AUTOMATION: true
+      TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
+      TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
+      TF_VAR_node_name: ${{ github.event.inputs.node_name }}
+
+    steps:
+
+    ############################################################
+    # Checkout repo
+    ############################################################
+
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+
+    ############################################################
+    # Terraform init
+    ############################################################
+
+    - name: Terraform init
+      if: github.event.inputs.action == 'create'
+      run: terraform init -upgrade -input=false
+
+
+    ############################################################
+    # CREATE MASTER
+    ############################################################
+
+    - name: Create master
+      if: github.event.inputs.action == 'create'
+      run: terraform apply -auto-approve -input=false
+      env:
+        TF_VAR_vm_name: master
+        TF_VAR_template_name: ubuntu24-golden
+        TF_VAR_vm_memory_mb: 4096
+        TF_VAR_disk_size_gb: 32
+        TF_VAR_ip_address: 192.168.1.20
+
+
+    ############################################################
+    # CREATE WORKER1
+    ############################################################
+
+    - name: Create worker1
+      if: github.event.inputs.action == 'create'
+      run: terraform apply -auto-approve -input=false
+      env:
+        TF_VAR_vm_name: worker1
+        TF_VAR_template_name: ubuntu24-golden
+        TF_VAR_vm_memory_mb: 4096
+        TF_VAR_disk_size_gb: 32
+        TF_VAR_ip_address: 192.168.1.21
+
+
+    ############################################################
+    # CREATE WORKER2
+    ############################################################
+
+    - name: Create worker2
+      if: github.event.inputs.action == 'create'
+      run: terraform apply -auto-approve -input=false
+      env:
+        TF_VAR_vm_name: worker2
+        TF_VAR_template_name: ubuntu24-golden
+        TF_VAR_vm_memory_mb: 4096
+        TF_VAR_disk_size_gb: 32
+        TF_VAR_ip_address: 192.168.1.22
+
+
+    ############################################################
+    # DESTROY MASTER
+    ############################################################
+
+    - name: Destroy master
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        ssh -i ~/.ssh/id_ed25519 \
+        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+        "qm destroy \$(qm list | grep master | awk '{print \$1}') --purge || true"
+
+
+    ############################################################
+    # DESTROY WORKER1
+    ############################################################
+
+    - name: Destroy worker1
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        ssh -i ~/.ssh/id_ed25519 \
+        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+        "qm destroy \$(qm list | grep worker1 | awk '{print \$1}') --purge || true"
+
+
+    ############################################################
+    # DESTROY WORKER2
+    ############################################################
+
+    - name: Destroy worker2
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        ssh -i ~/.ssh/id_ed25519 \
+        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+        "qm destroy \$(qm list | grep worker2 | awk '{print \$1}') --purge || true"

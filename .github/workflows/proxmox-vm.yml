@@ -47,6 +47,11 @@ jobs:
       TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
       TF_VAR_proxmox_token_id: ${{ secrets.PROXMOX_TOKEN_ID }}
       TF_VAR_proxmox_token_secret: ${{ secrets.PROXMOX_TOKEN_SECRET }}
+      TF_VAR_node_name: ${{ github.event.inputs.node_name }}
+      TF_VAR_vm_name: ${{ github.event.inputs.vm_name }}
+      TF_VAR_template_name: ${{ github.event.inputs.template }}
+      TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
+      TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
 
     defaults:
       run:
@@ -56,38 +61,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate inputs
+        run: |
+          if ! [[ "${{ github.event.inputs.vm_name }}" =~ ^[a-zA-Z0-9-]+$ ]]; then
+            echo "Error: VM name must contain only alphanumeric characters and hyphens."
+            exit 1
+          fi
+          if ! [[ "${{ github.event.inputs.ram_mb }}" =~ ^[0-9]+$ ]] || [[ "${{ github.event.inputs.ram_mb }}" -le 0 ]]; then
+            echo "Error: RAM must be a positive number."
+            exit 1
+          fi
+          if ! [[ "${{ github.event.inputs.disk_gb }}" =~ ^[0-9]+$ ]] || [[ "${{ github.event.inputs.disk_gb }}" -le 0 ]]; then
+            echo "Error: Disk size must be a positive number."
+            exit 1
+          fi
+        shell: bash
+
       - name: Terraform init
         run: terraform init -input=false
-        env:
-          TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
-          TF_VAR_proxmox_token_id: ${{ secrets.PROXMOX_TOKEN_ID }}
-          TF_VAR_proxmox_token_secret: ${{ secrets.PROXMOX_TOKEN_SECRET }}
 
       - name: Terraform apply (create)
         if: ${{ github.event.inputs.action == 'create' }}
-        run: |
-          terraform apply -auto-approve \
-            # -var="proxmox_api_url=${TF_VAR_proxmox_api_url}" \
-            # -var="proxmox_token_id=${TF_VAR_proxmox_token_id}" \
-            # -var="proxmox_token_secret=${TF_VAR_proxmox_token_secret}" \
-            -var="node_name=${{ github.event.inputs.node_name }}" \
-            -var="vm_name=${{ github.event.inputs.vm_name }}" \
-            -var="template_name=${{ github.event.inputs.template }}" \
-            -var="vm_memory_mb=${{ github.event.inputs.ram_mb }}" \
-            -var="disk_size_gb=${{ github.event.inputs.disk_gb }}"
+        run: terraform apply -auto-approve
 
       - name: Terraform destroy (destroy)
         if: ${{ github.event.inputs.action == 'destroy' }}
-        run: |
-          terraform destroy -auto-approve \
-            # -var="proxmox_api_url=${TF_VAR_proxmox_api_url}" \
-            # -var="proxmox_token_id=${TF_VAR_proxmox_token_id}" \
-            # -var="proxmox_token_secret=${TF_VAR_proxmox_token_secret}" \
-            -var="node_name=${{ github.event.inputs.node_name }}" \
-            -var="vm_name=${{ github.event.inputs.vm_name }}" \
-            -var="template_name=${{ github.event.inputs.template }}" \
-            -var="vm_memory_mb=${{ github.event.inputs.ram_mb }}" \
-            -var="disk_size_gb=${{ github.event.inputs.disk_gb }}"
+        run: terraform destroy -auto-approve
 
       - name: Show outputs (create only)
         if: ${{ github.event.inputs.action == 'create' }}

@@ -117,12 +117,17 @@ jobs:
 
           cat <<EOF > ansible/inventory.ini
           [newvm]
-          $VM_IP ansible_user=root ansible_ssh_private_key_file=~/.ssh/id_ed25519
+          $VM_IP ansible_user=root ansible_ssh_private_key_file=~/.ssh/id_ed25519 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
           EOF
 
           echo "Inventory created:"
           cat ansible/inventory.ini
 
+      - name: Add Vm to known_hosts
+        if: github.event.inputs.action == 'create'
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $VM_IP >> ~/.ssh/known_hosts
 
       ############################################################
       # Run Ansible bootstrap playbook

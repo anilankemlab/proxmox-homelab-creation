@@ -20,6 +20,7 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
   }
 
   cpu {
+    type  = "host"
     cores = var.vm_cores
   }
 

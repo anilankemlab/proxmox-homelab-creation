@@ -95,8 +95,8 @@ jobs:
         TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
         TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
         TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
-        TF_VAR_gateway: ${{ github.event.inputs.gateway }}
-        TF_VAR_cidr: ${{ github.event.inputs.cidr }}
+        # TF_VAR_gateway: ${{ github.event.inputs.gateway }}
+        # TF_VAR_cidr: ${{ github.event.inputs.cidr }}
 
 
     - name: Terraform output

@@ -14,6 +14,10 @@ variable "proxmox_token_secret" {
   sensitive   = true
 }
 
+variable "proxmox_api_token" {
+  type      = string
+  sensitive = true
+}
 
 variable "node_name" {
   description = "Proxmox node where the VM will run"

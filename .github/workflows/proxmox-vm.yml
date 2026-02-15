@@ -45,8 +45,8 @@ jobs:
     env:
       TF_IN_AUTOMATION: "true"
       TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
-      TF_VAR_proxmox_token_id: ${{ secrets.PROXMOX_TOKEN_ID }}
-      TF_VAR_proxmox_token_secret: ${{ secrets.PROXMOX_TOKEN_SECRET }}
+      TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
+
       TF_VAR_node_name: ${{ github.event.inputs.node_name }}
       TF_VAR_vm_name: ${{ github.event.inputs.vm_name }}
       TF_VAR_template_name: ${{ github.event.inputs.template }}

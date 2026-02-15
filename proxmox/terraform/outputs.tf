@@ -14,5 +14,8 @@ output "vm_node" {
 }
 
 output "vm_ip" {
-  value = proxmox_virtual_environment_vm.vm_from_template.ipv4_addresses[1][0]
+  value = try(
+    flatten(proxmox_virtual_environment_vm.vm_from_template.ipv4_addresses)[0],
+    null
+  )
 }

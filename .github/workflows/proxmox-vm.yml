@@ -43,7 +43,7 @@ on:
         type: string
         default: proxmox
 
-        ip_address:
+      ip_address:
         description: "Static IP address (example: 192.168.1.50)"
         required: true
         type: string

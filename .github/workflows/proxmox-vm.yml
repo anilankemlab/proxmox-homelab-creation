@@ -127,7 +127,8 @@ jobs:
         if: github.event.inputs.action == 'create'
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H $VM_IP >> ~/.ssh/known_hosts
+          echo "adding $VM_IP to known_hosts"
+          ssh-keyscan -H "$VM_IP" >> ~/.ssh/known_hosts
 
       ############################################################
       # Run Ansible bootstrap playbook

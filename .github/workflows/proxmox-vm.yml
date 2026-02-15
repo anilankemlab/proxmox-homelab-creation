@@ -3,39 +3,19 @@ name: Proxmox VM create/destroy
 on:
   workflow_dispatch:
     inputs:
+
       action:
-        description: "Action to perform"
+        description: "Action"
         required: true
         type: choice
         options:
           - create
           - destroy
-        default: create
-
-      template:
-        description: "Template to clone from"
-        required: true
-        type: choice
-        options:
-          - ubuntu24-golden
-          - centos10-stream-golden
 
       vm_name:
-        description: "Name of the VM"
+        description: "VM name"
         required: true
         type: string
-
-      ram_mb:
-        description: "RAM in MB"
-        required: true
-        type: number
-        default: 2048
-
-      disk_gb:
-        description: "Disk size in GB"
-        required: true
-        type: number
-        default: 20
 
       node_name:
         description: "Proxmox node"
@@ -43,29 +23,42 @@ on:
         type: string
         default: proxmox
 
+      template:
+        description: "Template"
+        required: false
+        type: choice
+        options:
+          - ubuntu24-golden
+          - centos10-stream-golden
+
+      ram_mb:
+        required: false
+        type: number
+        default: 2048
+
+      disk_gb:
+        required: false
+        type: number
+        default: 20
+
       ip_address:
-        description: "Static IP address (example: 192.168.1.50)"
-        required: true
+        required: false
         type: string
 
       gateway:
-        description: "Gateway (example: 192.168.1.1)"
-        required: true
+        required: false
         type: string
         default: 192.168.1.1
 
-
-
       cidr:
-        description: "CIDR prefix (example: 24)"
-        required: true
+        required: false
         type: number
         default: 24
 
 
-
 jobs:
-  proxmox-vm:
+  proxmox:
+
     runs-on: self-hosted
 
     defaults:
@@ -73,50 +66,71 @@ jobs:
         working-directory: proxmox/terraform
 
     env:
-      TF_IN_AUTOMATION: "true"
-
-      # Proxmox connection
+      TF_IN_AUTOMATION: true
       TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
       TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
-
-      # VM variables
       TF_VAR_node_name: ${{ github.event.inputs.node_name }}
       TF_VAR_vm_name: ${{ github.event.inputs.vm_name }}
-      TF_VAR_template_name: ${{ github.event.inputs.template }}
-      TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
-      TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
-      TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
-      TF_VAR_gateway: ${{ github.event.inputs.gateway }}
-      TF_VAR_cidr: ${{ github.event.inputs.cidr }}
-
-
 
     steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
 
-      - name: Terraform init
-        run: |
-          rm -rf .terraform .terraform.lock.hcl
-          terraform init -upgrade -input=false
+    ############################################
+    # CREATE VM USING TERRAFORM
+    ############################################
+
+    - name: Terraform init
+      if: github.event.inputs.action == 'create'
+      run: terraform init -upgrade -input=false
 
 
-      - name: Terraform validate
-        run: terraform validate
+    - name: Terraform apply
+      if: github.event.inputs.action == 'create'
+      run: terraform apply -auto-approve -input=false
+      env:
+        TF_VAR_template_name: ${{ github.event.inputs.template }}
+        TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
+        TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
+        TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
+        TF_VAR_gateway: ${{ github.event.inputs.gateway }}
+        TF_VAR_cidr: ${{ github.event.inputs.cidr }}
 
 
-      - name: Terraform apply (create)
-        if: ${{ github.event.inputs.action == 'create' }}
-        run: terraform apply -auto-approve -input=false
+    - name: Terraform output
+      if: github.event.inputs.action == 'create'
+      run: terraform output
 
 
-      - name: Terraform destroy
-        if: ${{ github.event.inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve -input=false
+    ############################################
+    # DESTROY VM USING SSH (NO TERRAFORM)
+    ############################################
 
+    - name: Setup SSH key
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
 
-      - name: Show outputs
-        if: ${{ github.event.inputs.action == 'create' }}
-        run: terraform output
+    - name: Destroy VM on Proxmox
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        VMID=$(ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+          "qm list | grep '${{ github.event.inputs.vm_name }}' | awk '{print \$1}'")
+
+        if [ -z "$VMID" ]; then
+          echo "VM not found"
+          exit 0
+        fi
+
+        echo "Destroying VMID: $VMID"
+
+        ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+          "qm destroy $VMID --purge"
+
+        echo "VM destroyed successfully"

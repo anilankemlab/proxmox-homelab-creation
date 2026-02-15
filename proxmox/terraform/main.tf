@@ -54,7 +54,7 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
         # If an IP address is provided, use static configuration; otherwise, use DHCP
         address = (
           var.ip_address != null && var.ip_address != ""
-        ) ? "${var.ip_address}/${var.cidr}" : null
+        ) ? "${var.ip_address}/${var.cidr}" : "dhcp"
 
         gateway = (
           var.ip_address != null && var.ip_address != ""

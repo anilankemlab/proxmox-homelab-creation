@@ -155,8 +155,10 @@ jobs:
       - name: Verify Ansible
         if: github.event.inputs.action == 'create'
         run: |
-          which ansible --version
-          ansibleplaybook --version
+          which ansible 
+          which ansible-playbook
+          ansible --version
+          ansible-playbook --version
       
       - name: Run Ansible bootstrap
         if: github.event.inputs.action == 'create'

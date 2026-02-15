@@ -99,6 +99,7 @@ jobs:
         # TF_VAR_cidr: ${{ github.event.inputs.cidr }}
 
 
+        
     - name: Terraform output
       if: github.event.inputs.action == 'create'
       run: terraform output

@@ -1,4 +1,4 @@
-name: Proxmox Cluster create/destroy
+name: kubernetes Cluster create/destroy
 
 on:
   workflow_dispatch:
@@ -17,6 +17,7 @@ on:
         required: true
         default: proxmox
 
+
 jobs:
 
   cluster:
@@ -33,14 +34,28 @@ jobs:
       TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
       TF_VAR_node_name: ${{ github.event.inputs.node_name }}
 
+
     steps:
 
     ############################################################
-    # Checkout repo
+    # Checkout repository
     ############################################################
 
     - name: Checkout repo
       uses: actions/checkout@v4
+
+
+    ############################################################
+    # Setup SSH key (needed for destroy)
+    ############################################################
+
+    - name: Setup SSH key
+      if: github.event.inputs.action == 'destroy'
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
 
 
     ############################################################
@@ -56,7 +71,7 @@ jobs:
     # CREATE MASTER
     ############################################################
 
-    - name: Create master
+    - name: Create master VM
       if: github.event.inputs.action == 'create'
       run: terraform apply -auto-approve -input=false
       env:
@@ -71,7 +86,7 @@ jobs:
     # CREATE WORKER1
     ############################################################
 
-    - name: Create worker1
+    - name: Create worker1 VM
       if: github.event.inputs.action == 'create'
       run: terraform apply -auto-approve -input=false
       env:
@@ -86,7 +101,7 @@ jobs:
     # CREATE WORKER2
     ############################################################
 
-    - name: Create worker2
+    - name: Create worker2 VM
       if: github.event.inputs.action == 'create'
       run: terraform apply -auto-approve -input=false
       env:
@@ -98,36 +113,50 @@ jobs:
 
 
     ############################################################
-    # DESTROY MASTER
+    # DESTROY ALL CLUSTER VMs SAFELY
     ############################################################
 
-    - name: Destroy master
+    - name: Destroy cluster VMs
       if: github.event.inputs.action == 'destroy'
       run: |
-        ssh -i ~/.ssh/id_ed25519 \
-        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-        "qm destroy \$(qm list | grep master | awk '{print \$1}') --purge || true"
+
+        for VM in master worker1 worker2
+        do
+
+          echo "Processing $VM"
+
+          VMID=$(ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm list | grep -w $VM | awk '{print \$1}'")
+
+          if [ -z "$VMID" ]; then
+            echo "$VM not found, skipping"
+            continue
+          fi
+
+          echo "Stopping $VM (VMID=$VMID)"
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm stop $VMID || true"
+
+          sleep 5
+
+          echo "Destroying $VM (VMID=$VMID)"
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm destroy $VMID --purge"
+
+          echo "$VM destroyed"
+
+        done
 
 
     ############################################################
-    # DESTROY WORKER1
+    # Done
     ############################################################
 
-    - name: Destroy worker1
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        ssh -i ~/.ssh/id_ed25519 \
-        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-        "qm destroy \$(qm list | grep worker1 | awk '{print \$1}') --purge || true"
-
-
-    ############################################################
-    # DESTROY WORKER2
-    ############################################################
-
-    - name: Destroy worker2
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        ssh -i ~/.ssh/id_ed25519 \
-        ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-        "qm destroy \$(qm list | grep worker2 | awk '{print \$1}') --purge || true"
+    - name: Done
+      run: echo "Cluster operation completed"

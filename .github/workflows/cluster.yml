@@ -1,4 +1,4 @@
-name: kubernetes Cluster create/destroy
+name: Proxmox Cluster create/destroy
 
 on:
   workflow_dispatch:
@@ -68,12 +68,12 @@ jobs:
 
 
     ############################################################
-    # CREATE MASTER
+    # CREATE MASTER VM (separate state)
     ############################################################
 
     - name: Create master VM
       if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false
+      run: terraform apply -auto-approve -input=false -state=cluster-master.tfstate
       env:
         TF_VAR_vm_name: master
         TF_VAR_template_name: ubuntu24-golden
@@ -83,12 +83,12 @@ jobs:
 
 
     ############################################################
-    # CREATE WORKER1
+    # CREATE WORKER1 VM (separate state)
     ############################################################
 
     - name: Create worker1 VM
       if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false
+      run: terraform apply -auto-approve -input=false -state=cluster-worker1.tfstate
       env:
         TF_VAR_vm_name: worker1
         TF_VAR_template_name: ubuntu24-golden
@@ -98,12 +98,12 @@ jobs:
 
 
     ############################################################
-    # CREATE WORKER2
+    # CREATE WORKER2 VM (separate state)
     ############################################################
 
     - name: Create worker2 VM
       if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false
+      run: terraform apply -auto-approve -input=false -state=cluster-worker2.tfstate
       env:
         TF_VAR_vm_name: worker2
         TF_VAR_template_name: ubuntu24-golden
@@ -136,6 +136,7 @@ jobs:
           fi
 
           echo "Stopping $VM (VMID=$VMID)"
+
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
             ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
@@ -144,6 +145,7 @@ jobs:
           sleep 5
 
           echo "Destroying $VM (VMID=$VMID)"
+
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
             ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
@@ -155,8 +157,8 @@ jobs:
 
 
     ############################################################
-    # Done
+    # DONE
     ############################################################
 
     - name: Done
-      run: echo "Cluster operation completed"
+      run: echo "Cluster operation completed successfully"

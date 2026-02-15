@@ -1,4 +1,4 @@
-name: Proxmox Cluster create/destroy
+name: Kubernetes Cluster create/destroy
 
 on:
   workflow_dispatch:

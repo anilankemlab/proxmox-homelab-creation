@@ -38,6 +38,19 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
     model  = "virtio"
   }
 
+  initialization {
+
+    ip_config {
+
+      ipv4 {
+        address = "${var.ip_address}/${var.cidr}"
+        gateway = var.gateway
+      }
+
+    }
+
+  }
+
   # operating_system {
   #   type = "l26"
   # }

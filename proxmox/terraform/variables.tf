@@ -19,6 +19,23 @@ variable "proxmox_api_url" {
 #   sensitive = true
 # }
 
+variable "ip_address" {
+  description = "Static IP address"
+  type        = string
+}
+
+variable "gateway" {
+  description = "Default gateway"
+  type        = string
+}
+
+variable "cidr" {
+  description = "CIDR prefix"
+  type        = number
+  default     = 24
+}
+
+
 variable "node_name" {
   description = "Proxmox node where the VM will run"
   type        = string

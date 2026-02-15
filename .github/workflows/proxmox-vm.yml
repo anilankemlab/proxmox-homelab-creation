@@ -43,6 +43,26 @@ on:
         type: string
         default: proxmox
 
+        ip_address:
+        description: "Static IP address (example: 192.168.1.50)"
+        required: true
+        type: string
+
+      gateway:
+        description: "Gateway (example: 192.168.1.1)"
+        required: true
+        type: string
+        default: 192.168.1.1
+
+
+
+      cidr:
+        description: "CIDR prefix (example: 24)"
+        required: true
+        type: number
+        default: 24
+
+
 
 jobs:
   proxmox-vm:
@@ -65,6 +85,10 @@ jobs:
       TF_VAR_template_name: ${{ github.event.inputs.template }}
       TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
       TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
+      TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
+      TF_VAR_gateway: ${{ github.event.inputs.gateway }}
+      TF_VAR_cidr: ${{ github.event.inputs.cidr }}
+
 
 
     steps:

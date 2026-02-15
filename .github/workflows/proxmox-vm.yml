@@ -11,6 +11,7 @@ on:
           - create
           - destroy
         default: create
+
       template:
         description: "Template to clone from"
         required: true
@@ -18,79 +19,80 @@ on:
         options:
           - ubuntu24-golden
           - centos10-stream-golden
+
       vm_name:
         description: "Name of the VM"
         required: true
         type: string
+
       ram_mb:
         description: "RAM in MB"
         required: true
         type: number
         default: 2048
+
       disk_gb:
         description: "Disk size in GB"
         required: true
         type: number
         default: 20
+
       node_name:
-        description: "Proxmox node (e.g. pve)"
+        description: "Proxmox node"
         required: true
         type: string
         default: proxmox
+
 
 jobs:
   proxmox-vm:
     runs-on: self-hosted
 
+    defaults:
+      run:
+        working-directory: proxmox/terraform
+
     env:
       TF_IN_AUTOMATION: "true"
+
+      # Proxmox connection
       TF_VAR_proxmox_api_url: ${{ secrets.PROXMOX_API_URL }}
       TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
 
+      # VM variables
       TF_VAR_node_name: ${{ github.event.inputs.node_name }}
       TF_VAR_vm_name: ${{ github.event.inputs.vm_name }}
       TF_VAR_template_name: ${{ github.event.inputs.template }}
       TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
       TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
 
-    defaults:
-      run:
-        working-directory: proxmox/terraform
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate inputs
-        run: |
-          if ! [[ "${{ github.event.inputs.vm_name }}" =~ ^[a-zA-Z0-9-]+$ ]]; then
-            echo "Error: VM name must contain only alphanumeric characters and hyphens."
-            exit 1
-          fi
-          if ! [[ "${{ github.event.inputs.ram_mb }}" =~ ^[0-9]+$ ]] || [[ "${{ github.event.inputs.ram_mb }}" -le 0 ]]; then
-            echo "Error: RAM must be a positive number."
-            exit 1
-          fi
-          if ! [[ "${{ github.event.inputs.disk_gb }}" =~ ^[0-9]+$ ]] || [[ "${{ github.event.inputs.disk_gb }}" -le 0 ]]; then
-            echo "Error: Disk size must be a positive number."
-            exit 1
-          fi
-        shell: bash
 
       - name: Terraform init
-        run: terraform init -input=false
+        run: |
+          rm -rf .terraform .terraform.lock.hcl
+          terraform init -upgrade -input=false
+
+
+      - name: Terraform validate
+        run: terraform validate
+
 
       - name: Terraform apply (create)
         if: ${{ github.event.inputs.action == 'create' }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -input=false
 
-      - name: Terraform destroy (destroy)
+
+      - name: Terraform destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve -input=false
 
-      - name: Show outputs (create only)
+
+      - name: Show outputs
         if: ${{ github.event.inputs.action == 'create' }}
         run: terraform output
-###
-
-      

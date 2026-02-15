@@ -20,8 +20,9 @@ variable "proxmox_api_url" {
 # }
 
 variable "ip_address" {
-  description = "Static IP address"
+  description = "Static IP address (optional)"
   type        = string
+  default     = null
 }
 
 variable "gateway" {

@@ -147,7 +147,17 @@ jobs:
       ############################################################
       # Run Ansible bootstrap playbook
       ############################################################
+      
+      - name: add ansible path to PATH
+        if: github.event.inputs.action == 'create'
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Verify Ansible
+        if: github.event.inputs.action == 'create'
+        run: |
+          which ansible --version
+          ansibleplaybook --version
+      
       - name: Run Ansible bootstrap
         if: github.event.inputs.action == 'create'
         run: |

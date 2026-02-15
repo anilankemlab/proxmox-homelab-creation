@@ -39,6 +39,10 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
     model  = "virtio"
   }
 
+  agent {
+    enabled = true
+  }
+
   initialization {
 
 

@@ -24,6 +24,8 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
     cores = var.vm_cores
   }
 
+  onboot = true
+
   memory {
     dedicated = var.vm_memory_mb
   }

@@ -1,32 +1,45 @@
-resource "proxmox_vm_qemu" "vm_from_template" {
-  name        = var.vm_name
-  target_node = var.node_name
+data "proxmox_virtual_environment_vms" "template" {
+  node_name = var.node_name
 
-  # Clone from an existing template
-  clone      = var.template_name
-  full_clone = var.full_clone
-  cores      = var.vm_cores
-  memory = var.vm_memory_mb
-
-
-  tags = length(var.vm_tags) > 0 ? join(";", var.vm_tags) : null
-
-  disk {
-    size    = "${var.disk_size_gb}G"
-    type    = "scsi"
-    storage = var.disk_storage
+  filter {
+    name = var.template_name
   }
-
-  network {
-    model  = "virtio"
-    bridge = "vmbr0"
-  }
-
-
-
-
-
-  # Reasonable defaults
-  onboot = true
 }
 
+resource "proxmox_virtual_environment_vm" "vm_from_template" {
+
+  name      = var.vm_name
+  node_name = var.node_name
+
+  tags = var.vm_tags
+
+  clone {
+    vm_id = data.proxmox_virtual_environment_vms.template.vms[0].vm_id
+    full  = var.full_clone
+  }
+
+  cpu {
+    cores = var.vm_cores
+  }
+
+  memory {
+    dedicated = var.vm_memory_mb
+  }
+
+  disk {
+    datastore_id = var.disk_storage
+    interface    = "scsi0"
+    size         = var.disk_size_gb
+  }
+
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+
+  operating_system {
+    type = "l26"
+  }
+
+  on_boot = true
+}

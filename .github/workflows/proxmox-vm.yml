@@ -127,6 +127,16 @@ jobs:
           fi
 
           echo "Found VMID: $VMID"
+
+          echo "stopping VM..."
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm stop $VMID ||true"
+
+          echo "wating for VM to stop..."
+          sleep 5
+
           echo "Destroying VM..."
 
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \

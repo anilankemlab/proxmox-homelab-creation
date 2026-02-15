@@ -40,6 +40,14 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
 
   initialization {
 
+
+    user_account {
+      username = "root"
+      keys = [
+        file("~/.ssh/id_ed25519.pub")
+      ]
+    }
+
     ip_config {
 
       ipv4 {

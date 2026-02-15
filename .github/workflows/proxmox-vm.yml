@@ -94,13 +94,48 @@ jobs:
           TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
 
 
-      - name: Terraform output
+      ############################################################
+      # Get VM IP from Terraform output
+      ############################################################
+
+      - name: Get VM IP
         if: github.event.inputs.action == 'create'
-        run: terraform output
+        run: |
+          VM_IP=$(terraform output -raw vm_ip)
+          echo "VM_IP=$VM_IP" >> $GITHUB_ENV
+          echo "VM IP is $VM_IP"
 
 
       ############################################################
-      # DESTROY VM USING SSH (NO TERRAFORM STATE REQUIRED)
+      # Create Ansible inventory dynamically
+      ############################################################
+
+      - name: Create Ansible inventory
+        if: github.event.inputs.action == 'create'
+        run: |
+          mkdir -p ansible
+
+          cat <<EOF > ansible/inventory.ini
+          [newvm]
+          $VM_IP ansible_user=root ansible_ssh_private_key_file=~/.ssh/id_ed25519
+          EOF
+
+          echo "Inventory created:"
+          cat ansible/inventory.ini
+
+
+      ############################################################
+      # Run Ansible bootstrap playbook
+      ############################################################
+
+      - name: Run Ansible bootstrap
+        if: github.event.inputs.action == 'create'
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/bootstrap.yml
+
+
+      ############################################################
+      # DESTROY VM USING SSH (STATELESS)
       ############################################################
 
       - name: Setup SSH key
@@ -128,17 +163,15 @@ jobs:
 
           echo "Found VMID: $VMID"
 
-          echo "stopping VM..."
-
+          echo "Stopping VM..."
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
             ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-            "qm stop $VMID ||true"
+            "qm stop $VMID || true"
 
-          echo "wating for VM to stop..."
+          echo "Waiting for VM to stop..."
           sleep 5
 
           echo "Destroying VM..."
-
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
             ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
             "qm destroy $VMID --purge"

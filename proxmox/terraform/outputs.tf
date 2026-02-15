@@ -12,3 +12,7 @@ output "vm_node" {
   description = "Proxmox node where VM is created"
   value       = proxmox_virtual_environment_vm.vm_from_template.node_name
 }
+
+output "vm_ip" {
+  value = proxmox_virtual_environment_vm.vm_from_template.ipv4_addresses[1][0]
+}

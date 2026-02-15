@@ -32,28 +32,21 @@ on:
           - centos10-stream-golden
 
       ram_mb:
+        description: "RAM (MB)"
         required: false
         type: number
         default: 2048
 
       disk_gb:
+        description: "Disk size (GB)"
         required: false
         type: number
         default: 20
 
       ip_address:
+        description: "Static IP address"
         required: false
         type: string
-
-      # gateway:
-      #   required: false
-      #   type: string
-      #   default: 192.168.1.1
-
-      # cidr:
-      #   required: false
-      #   type: number
-      #   default: 24
 
 
 jobs:
@@ -74,64 +67,70 @@ jobs:
 
     steps:
 
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      ############################################################
+      # Checkout repository
+      ############################################################
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
 
-    ############################################
-    # CREATE VM USING TERRAFORM
-    ############################################
+      ############################################################
+      # CREATE VM USING TERRAFORM
+      ############################################################
 
-    - name: Terraform init
-      if: github.event.inputs.action == 'create'
-      run: terraform init -upgrade -input=false
-
-
-    - name: Terraform apply
-      if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false
-      env:
-        TF_VAR_template_name: ${{ github.event.inputs.template }}
-        TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
-        TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
-        TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
-        # TF_VAR_gateway: ${{ github.event.inputs.gateway }}
-        # TF_VAR_cidr: ${{ github.event.inputs.cidr }}
+      - name: Terraform init
+        if: github.event.inputs.action == 'create'
+        run: terraform init -upgrade -input=false
 
 
+      - name: Terraform apply
+        if: github.event.inputs.action == 'create'
+        run: terraform apply -auto-approve -input=false
+        env:
+          TF_VAR_template_name: ${{ github.event.inputs.template }}
+          TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
+          TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
+          TF_VAR_ip_address: ${{ github.event.inputs.ip_address }}
 
-    - name: Terraform output
-      if: github.event.inputs.action == 'create'
-      run: terraform output
+
+      - name: Terraform output
+        if: github.event.inputs.action == 'create'
+        run: terraform output
 
 
-    ############################################
-    # DESTROY VM USING SSH (NO TERRAFORM)
-    ############################################
+      ############################################################
+      # DESTROY VM USING SSH (NO TERRAFORM STATE REQUIRED)
+      ############################################################
 
-    - name: Setup SSH key
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
+      - name: Setup SSH key
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Destroy VM on Proxmox
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        VMID=$(ssh -o StrictHostKeyChecking=no \
-          ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-          "qm list | grep '${{ github.event.inputs.vm_name }}' | awk '{print \$1}'")
 
-        if [ -z "$VMID" ]; then
-          echo "VM not found"
-          exit 0
-        fi
+      - name: Destroy VM on Proxmox
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          echo "Looking for VM: ${{ github.event.inputs.vm_name }}"
 
-        echo "Destroying VMID: $VMID"
+          VMID=$(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm list | grep -w '${{ github.event.inputs.vm_name }}' | awk '{print \$1}'")
 
-        ssh -o StrictHostKeyChecking=no \
-          ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-          "qm destroy $VMID --purge"
+          if [ -z "$VMID" ]; then
+            echo "VM not found"
+            exit 0
+          fi
 
-        echo "VM destroyed successfully"
+          echo "Found VMID: $VMID"
+          echo "Destroying VM..."
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+            "qm destroy $VMID --purge"
+
+          echo "VM destroyed successfully"

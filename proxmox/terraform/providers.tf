@@ -7,6 +7,11 @@ terraform {
   }
 }
 
+variable "proxmox_api_token" {
+  type      = string
+  sensitive = true
+}
+
 
 provider "proxmox" {
   endpoint  = var.proxmox_api_url

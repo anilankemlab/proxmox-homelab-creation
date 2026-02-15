@@ -27,6 +27,7 @@ variable "ip_address" {
 variable "gateway" {
   description = "Default gateway"
   type        = string
+  default     = "192.168.1.1"
 }
 
 variable "cidr" {

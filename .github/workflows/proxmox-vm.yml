@@ -80,12 +80,13 @@ jobs:
 
       - name: Terraform init
         if: github.event.inputs.action == 'create'
-        run: terraform init -upgrade -input=false
+        run: terraform init -upgrade -reconfigure -backend-config="path=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate" -input=false
 
       - name: Terraform apply
         if: github.event.inputs.action == 'create'
-        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate
+        run: terraform apply -auto-approve -input=false
         env:
+          TF_VAR_vm_name: ${{ github.event.inputs.vm_name }}
           TF_VAR_template_name: ${{ github.event.inputs.template }}
           TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}
           TF_VAR_disk_size_gb: ${{ github.event.inputs.disk_gb }}
@@ -206,11 +207,11 @@ jobs:
 
       - name: Terraform init (destroy)
         if: github.event.inputs.action == 'destroy'
-        run: terraform init -upgrade -input=false
+        run: terraform init -upgrade -reconfigure -backend-config="path=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate" -input=false
 
       - name: Terraform destroy
         if: github.event.inputs.action == 'destroy'
-        run: terraform apply -destroy -auto-approve -input=false -state=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate
+        run: terraform apply -destroy -auto-approve -input=false
         env:
           TF_VAR_template_name: ${{ github.event.inputs.template }}
           TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}

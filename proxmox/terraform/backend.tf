@@ -1,5 +1,5 @@
 terraform {
   backend "local" {
-    # path = "terraform.tfstate" # Overridden by -state flag in CI/CD workflows
+    # path = "terraform.tfstate" # Overridden by backend-config in CI/CD workflows
   }
 }

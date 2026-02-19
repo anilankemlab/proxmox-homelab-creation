@@ -46,17 +46,17 @@ jobs:
         if: github.event.inputs.action == 'create'
         run: mkdir -p /home/ansible/terraform_state/cluster
 
-      - name: Terraform init
-        if: github.event.inputs.action == 'create'
-        run: terraform init -upgrade -input=false
-
       ############################################################
       # CREATE MASTER VM (separate state)
       ############################################################
 
+      - name: Terraform init (create master)
+        if: github.event.inputs.action == 'create'
+        run: terraform init -upgrade -reconfigure -backend-config="path=/home/ansible/terraform_state/cluster/master.tfstate" -input=false
+
       - name: Create master VM
         if: github.event.inputs.action == 'create'
-        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/master.tfstate
+        run: terraform apply -auto-approve -input=false
         env:
           TF_VAR_vm_name: master
           TF_VAR_template_name: ubuntu24-golden
@@ -68,9 +68,13 @@ jobs:
       # CREATE WORKER1 VM (separate state)
       ############################################################
 
+      - name: Terraform init (create worker 1)
+        if: github.event.inputs.action == 'create'
+        run: terraform init -upgrade -reconfigure -backend-config="path=/home/ansible/terraform_state/cluster/worker1.tfstate" -input=false
+
       - name: Create worker1 VM
         if: github.event.inputs.action == 'create'
-        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker1.tfstate
+        run: terraform apply -auto-approve -input=false
         env:
           TF_VAR_vm_name: worker1
           TF_VAR_template_name: ubuntu24-golden
@@ -82,9 +86,13 @@ jobs:
       # CREATE WORKER2 VM (separate state)
       ############################################################
 
+      - name: Terraform init (create worker 2)
+        if: github.event.inputs.action == 'create'
+        run: terraform init -upgrade -reconfigure -backend-config="path=/home/ansible/terraform_state/cluster/worker2.tfstate" -input=false
+
       - name: Create worker2 VM
         if: github.event.inputs.action == 'create'
-        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker2.tfstate
+        run: terraform apply -auto-approve -input=false
         env:
           TF_VAR_vm_name: worker2
           TF_VAR_template_name: ubuntu24-golden

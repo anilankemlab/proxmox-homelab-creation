@@ -3,7 +3,6 @@ name: Kubernetes Cluster create/destroy
 on:
   workflow_dispatch:
     inputs:
-
       action:
         description: "Action"
         required: true
@@ -17,11 +16,8 @@ on:
         required: true
         default: proxmox
 
-
 jobs:
-
   cluster:
-
     runs-on: self-hosted
 
     defaults:
@@ -34,133 +30,128 @@ jobs:
       TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_API_TOKEN }}
       TF_VAR_node_name: ${{ github.event.inputs.node_name }}
 
-
     steps:
+      ############################################################
+      # Checkout repository
+      ############################################################
 
-    ############################################################
-    # Checkout repository
-    ############################################################
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Checkout repo
-      uses: actions/checkout@v4
+      ############################################################
+      # Setup SSH key (needed for destroy)
+      ############################################################
 
+      - name: Setup SSH key
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          mkdir -p ~/.ssh
+          rm -f ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
+          echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+          ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
 
-    ############################################################
-    # Setup SSH key (needed for destroy)
-    ############################################################
+      ############################################################
+      # Terraform init
+      ############################################################
 
-    - name: Setup SSH key
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        mkdir -p ~/.ssh
-        rm -f ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
-        echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
-        ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
+      - name: Create state directory
+        if: github.event.inputs.action == 'create'
+        run: mkdir -p /home/ansible/terraform_state/cluster
 
+      - name: Terraform init
+        if: github.event.inputs.action == 'create'
+        run: terraform init -upgrade -input=false
 
-    ############################################################
-    # Terraform init
-    ############################################################
+      ############################################################
+      # CREATE MASTER VM (separate state)
+      ############################################################
 
-    - name: Terraform init
-      if: github.event.inputs.action == 'create'
-      run: terraform init -upgrade -input=false
+      - name: Create master VM
+        if: github.event.inputs.action == 'create'
+        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/master.tfstate
+        env:
+          TF_VAR_vm_name: master
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.20
 
+      ############################################################
+      # CREATE WORKER1 VM (separate state)
+      ############################################################
 
-    ############################################################
-    # CREATE MASTER VM (separate state)
-    ############################################################
+      - name: Create worker1 VM
+        if: github.event.inputs.action == 'create'
+        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker1.tfstate
+        env:
+          TF_VAR_vm_name: worker1
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.21
 
-    - name: Create master VM
-      if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false -state=cluster-master.tfstate
-      env:
-        TF_VAR_vm_name: master
-        TF_VAR_template_name: ubuntu24-golden
-        TF_VAR_vm_memory_mb: 4096
-        TF_VAR_disk_size_gb: 32
-        TF_VAR_ip_address: 192.168.1.20
+      ############################################################
+      # CREATE WORKER2 VM (separate state)
+      ############################################################
 
+      - name: Create worker2 VM
+        if: github.event.inputs.action == 'create'
+        run: terraform apply -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker2.tfstate
+        env:
+          TF_VAR_vm_name: worker2
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.22
 
-    ############################################################
-    # CREATE WORKER1 VM (separate state)
-    ############################################################
+      ############################################################
+      # DESTROY ALL CLUSTER VMs SAFELY
+      ############################################################
 
-    - name: Create worker1 VM
-      if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false -state=cluster-worker1.tfstate
-      env:
-        TF_VAR_vm_name: worker1
-        TF_VAR_template_name: ubuntu24-golden
-        TF_VAR_vm_memory_mb: 4096
-        TF_VAR_disk_size_gb: 32
-        TF_VAR_ip_address: 192.168.1.21
+      - name: Destroy cluster VMs
+        if: github.event.inputs.action == 'destroy'
+        run: |
 
+          for VM in master worker1 worker2
+          do
 
-    ############################################################
-    # CREATE WORKER2 VM (separate state)
-    ############################################################
+            echo "Processing $VM"
 
-    - name: Create worker2 VM
-      if: github.event.inputs.action == 'create'
-      run: terraform apply -auto-approve -input=false -state=cluster-worker2.tfstate
-      env:
-        TF_VAR_vm_name: worker2
-        TF_VAR_template_name: ubuntu24-golden
-        TF_VAR_vm_memory_mb: 4096
-        TF_VAR_disk_size_gb: 32
-        TF_VAR_ip_address: 192.168.1.22
+            VMID=$(ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+              "qm list | grep -w $VM | awk '{print \$1}'")
 
+            if [ -z "$VMID" ]; then
+              echo "$VM not found, skipping"
+              continue
+            fi
 
-    ############################################################
-    # DESTROY ALL CLUSTER VMs SAFELY
-    ############################################################
+            echo "Stopping $VM (VMID=$VMID)"
 
-    - name: Destroy cluster VMs
-      if: github.event.inputs.action == 'destroy'
-      run: |
+            ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+              "qm stop $VMID || true"
 
-        for VM in master worker1 worker2
-        do
+            sleep 5
 
-          echo "Processing $VM"
+            echo "Destroying $VM (VMID=$VMID)"
 
-          VMID=$(ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-            "qm list | grep -w $VM | awk '{print \$1}'")
+            ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
+              "qm destroy $VMID --purge"
 
-          if [ -z "$VMID" ]; then
-            echo "$VM not found, skipping"
-            continue
-          fi
+            echo "$VM destroyed"
 
-          echo "Stopping $VM (VMID=$VMID)"
+          done
 
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-            "qm stop $VMID || true"
+      ############################################################
+      # DONE
+      ############################################################
 
-          sleep 5
-
-          echo "Destroying $VM (VMID=$VMID)"
-
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-            "qm destroy $VMID --purge"
-
-          echo "$VM destroyed"
-
-        done
-
-
-    ############################################################
-    # DONE
-    ############################################################
-
-    - name: Done
-      run: echo "Cluster operation completed successfully"
+      - name: Done
+        run: echo "Cluster operation completed successfully"

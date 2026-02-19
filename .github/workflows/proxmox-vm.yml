@@ -210,7 +210,7 @@ jobs:
 
       - name: Terraform destroy
         if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate
+        run: terraform apply -destroy -auto-approve -input=false -state=/home/ansible/terraform_state/vms/${{ github.event.inputs.vm_name }}.tfstate
         env:
           TF_VAR_template_name: ${{ github.event.inputs.template }}
           TF_VAR_vm_memory_mb: ${{ github.event.inputs.ram_mb }}

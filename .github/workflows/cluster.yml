@@ -103,7 +103,7 @@ jobs:
       # Destroy Worker 2
       - name: Destroy worker2 VM
         if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker2.tfstate
+        run: terraform apply -destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker2.tfstate
         env:
           TF_VAR_vm_name: worker2
           TF_VAR_template_name: ubuntu24-golden
@@ -118,7 +118,7 @@ jobs:
       # Destroy Worker 1
       - name: Destroy worker1 VM
         if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker1.tfstate
+        run: terraform apply -destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker1.tfstate
         env:
           TF_VAR_vm_name: worker1
           TF_VAR_template_name: ubuntu24-golden
@@ -133,7 +133,7 @@ jobs:
       # Destroy Master
       - name: Destroy master VM
         if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/master.tfstate
+        run: terraform apply -destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/master.tfstate
         env:
           TF_VAR_vm_name: master
           TF_VAR_template_name: ubuntu24-golden

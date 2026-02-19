@@ -120,3 +120,5 @@ The playbook installs the following tools:
 -   `net-tools`
 
 It automatically detects the OS family (Debian/Ubuntu or RedHat-based) and uses the appropriate package manager (`apt` or `dnf`).
+
+

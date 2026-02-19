@@ -4,10 +4,17 @@
   gather_facts: yes
 
   tasks:
-
     ##################################################
     # Debian / Ubuntu
     ##################################################
+
+    - name: Wait for automatic system updates to complete
+      shell: |
+        while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+          echo "Waiting for apt lock..."
+          sleep 5
+        done
+      when: ansible_os_family == "Debian"
 
     - name: Update apt cache
       apt:
@@ -19,8 +26,8 @@
         name:
           - unzip
           - tar
-          - dnsutils        # nslookup
-          - iputils-ping    # ping
+          - dnsutils # nslookup
+          - iputils-ping # ping
           - traceroute
           - curl
           - wget
@@ -28,7 +35,6 @@
           - net-tools
         state: present
       when: ansible_os_family == "Debian"
-
 
     ##################################################
     # CentOS / Rocky / AlmaLinux / RHEL
@@ -39,8 +45,8 @@
         name:
           - unzip
           - tar
-          - bind-utils      # nslookup
-          - iputils         # ping
+          - bind-utils # nslookup
+          - iputils # ping
           - traceroute
           - curl
           - wget
@@ -48,7 +54,6 @@
           - net-tools
         state: present
       when: ansible_os_family == "RedHat"
-
 
     ##################################################
     # Verify installation

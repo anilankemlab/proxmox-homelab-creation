@@ -39,20 +39,6 @@ jobs:
         uses: actions/checkout@v4
 
       ############################################################
-      # Setup SSH key (needed for destroy)
-      ############################################################
-
-      - name: Setup SSH key
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          mkdir -p ~/.ssh
-          rm -f ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
-          echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
-          ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
-
-      ############################################################
       # Terraform init
       ############################################################
 
@@ -107,47 +93,57 @@ jobs:
           TF_VAR_ip_address: 192.168.1.22
 
       ############################################################
-      # DESTROY ALL CLUSTER VMs SAFELY
+      # DESTROY CLUSTER VMs USING TERRAFORM
       ############################################################
 
-      - name: Destroy cluster VMs
+      - name: Terraform init (destroy)
         if: github.event.inputs.action == 'destroy'
-        run: |
+        run: terraform init -upgrade -input=false
 
-          for VM in master worker1 worker2
-          do
+      # Destroy Worker 2
+      - name: Destroy worker2 VM
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker2.tfstate
+        env:
+          TF_VAR_vm_name: worker2
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.22
 
-            echo "Processing $VM"
+      - name: Cleanup worker2 state
+        if: github.event.inputs.action == 'destroy'
+        run: rm -f /home/ansible/terraform_state/cluster/worker2.tfstate
 
-            VMID=$(ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-              "qm list | grep -w $VM | awk '{print \$1}'")
+      # Destroy Worker 1
+      - name: Destroy worker1 VM
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/worker1.tfstate
+        env:
+          TF_VAR_vm_name: worker1
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.21
 
-            if [ -z "$VMID" ]; then
-              echo "$VM not found, skipping"
-              continue
-            fi
+      - name: Cleanup worker1 state
+        if: github.event.inputs.action == 'destroy'
+        run: rm -f /home/ansible/terraform_state/cluster/worker1.tfstate
 
-            echo "Stopping $VM (VMID=$VMID)"
+      # Destroy Master
+      - name: Destroy master VM
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve -input=false -state=/home/ansible/terraform_state/cluster/master.tfstate
+        env:
+          TF_VAR_vm_name: master
+          TF_VAR_template_name: ubuntu24-golden
+          TF_VAR_vm_memory_mb: 4096
+          TF_VAR_disk_size_gb: 32
+          TF_VAR_ip_address: 192.168.1.20
 
-            ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-              "qm stop $VMID || true"
-
-            sleep 5
-
-            echo "Destroying $VM (VMID=$VMID)"
-
-            ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              ${{ secrets.PROXMOX_SSH_USER }}@${{ secrets.PROXMOX_HOST }} \
-              "qm destroy $VMID --purge"
-
-            echo "$VM destroyed"
-
-          done
+      - name: Cleanup master state
+        if: github.event.inputs.action == 'destroy'
+        run: rm -f /home/ansible/terraform_state/cluster/master.tfstate
 
       ############################################################
       # DONE

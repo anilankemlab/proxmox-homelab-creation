@@ -91,3 +91,11 @@
         user: anilankem
         state: present
         key: "{{ lookup('file', '/home/ansible/.ssh/mylab.pub') }}"
+
+    - name: Allow anilankem passwordless sudo
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^anilankem ALL=.*NOPASSWD:ALL'
+        line: 'anilankem ALL=(ALL) NOPASSWD:ALL'
+      validate: 'visudo -cf %s'

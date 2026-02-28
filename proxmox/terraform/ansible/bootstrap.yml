@@ -98,4 +98,4 @@
         state: present
         regexp: '^anilankem ALL=.*NOPASSWD:ALL'
         line: 'anilankem ALL=(ALL) NOPASSWD:ALL'
-      validate: 'visudo -cf %s'
+        validate: 'visudo -cf %s'

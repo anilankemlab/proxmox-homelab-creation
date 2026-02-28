@@ -10,7 +10,9 @@
 
     - name: Wait for automatic system updates to complete
       shell: |
-        while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        while fuser /var/lib/dpkg/lock >/dev/null 2>&1 || \
+              fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+              fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
           echo "Waiting for apt lock..."
           sleep 5
         done
@@ -26,8 +28,8 @@
         name:
           - unzip
           - tar
-          - dnsutils # nslookup
-          - iputils-ping # ping
+          - dnsutils
+          - iputils-ping
           - traceroute
           - curl
           - wget
@@ -45,8 +47,8 @@
         name:
           - unzip
           - tar
-          - bind-utils # nslookup
-          - iputils # ping
+          - bind-utils
+          - iputils
           - traceroute
           - curl
           - wget
@@ -67,3 +69,25 @@
     - name: Show nslookup result
       debug:
         var: nslookup_test.stdout_lines
+
+    ##################################################
+    # Push SSH Public Key
+    ##################################################
+
+    - name: Ensure anilankem user exists
+      user:
+        name: anilankem
+        state: present
+        create_home: yes
+
+    - name: Add SSH key for root
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ lookup('file', 'files/mylab.pub') }}"
+
+    - name: Add SSH key for anilankem
+      authorized_key:
+        user: anilankem
+        state: present
+        key: "{{ lookup('file', 'files/mylab.pub') }}"

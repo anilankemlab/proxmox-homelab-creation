@@ -54,7 +54,7 @@ resource "proxmox_virtual_environment_vm" "vm_from_template" {
       username = "root"
       password = "anilankem"
       keys = [
-        file("~/.ssh/id_ed25519.pub")
+        file("~/.ssh/id_ed25519.pub"),
         file("~/.ssh/mylab.pub")
       ]
     }

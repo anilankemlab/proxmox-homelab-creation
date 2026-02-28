@@ -84,10 +84,10 @@
       authorized_key:
         user: root
         state: present
-        key: "{{ lookup('file', 'files/mylab.pub') }}"
+        key: "{{ lookup('file', '/home/ansible/.ssh/mylab.pub') }}"
 
     - name: Add SSH key for anilankem
       authorized_key:
         user: anilankem
         state: present
-        key: "{{ lookup('file', 'files/mylab.pub') }}"
+        key: "{{ lookup('file', '/home/ansible/.ssh/mylab.pub') }}"
